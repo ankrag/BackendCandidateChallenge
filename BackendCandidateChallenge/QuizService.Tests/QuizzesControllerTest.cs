@@ -72,7 +72,7 @@ public class QuizzesControllerTest
                    .UseStartup<Startup>()))
         {
             var client = testHost.CreateClient();
-            const long quizId = 999;
+            //const long quizId = 999;
             var question = new QuestionCreateModel("The answer to everything is what?");
             var content = new StringContent(JsonConvert.SerializeObject(question));
             content.Headers.ContentType = new MediaTypeHeaderValue("application/json");

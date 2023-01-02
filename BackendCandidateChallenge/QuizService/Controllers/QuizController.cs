@@ -50,6 +50,7 @@ public class QuizController : Controller
     public IActionResult Post([FromBody]QuizCreateModel value)
     {
         var sql = $"INSERT INTO Quiz (Title) VALUES('{value.Title}'); SELECT LAST_INSERT_ROWID();";
+        //TODO This is vulnerable to SQL injection. Use DynamicParameters or at least use ExecuteScalar with parameters. See GetQuizById for example
         var id = _connection.ExecuteScalar(sql);
         return Created($"/api/quizzes/{id}", null);
     }
@@ -59,6 +60,7 @@ public class QuizController : Controller
     public IActionResult Put(int id, [FromBody]QuizUpdateModel value)
     {
         const string sql = "UPDATE Quiz SET Title = @Title WHERE Id = @Id";
+        //TODO I prefer using DynamicParameters to prevent SQL injection. See GetQuizById for example
         int rowsUpdated = _connection.Execute(sql, new {Id = id, Title = value.Title});
         if (rowsUpdated == 0)
             return NotFound();
@@ -70,6 +72,7 @@ public class QuizController : Controller
     public IActionResult Delete(int id)
     {
         const string sql = "DELETE FROM Quiz WHERE Id = @Id";
+        //TODO I prefer using DynamicParameters to prevent SQL injection. See GetQuizById for example
         int rowsDeleted = _connection.Execute(sql, new {Id = id});
         if (rowsDeleted == 0)
             return NotFound();
@@ -90,6 +93,7 @@ public class QuizController : Controller
 
         // Insert the new Question into the database
         const string sql = "INSERT INTO Question (Text, QuizId) VALUES(@Text, @QuizId); SELECT LAST_INSERT_ROWID();";
+        //TODO I prefer using DynamicParameters to prevent SQL injection. See GetQuizById for example
         var questionId = _connection.ExecuteScalar(sql, new {Text = value.Text, QuizId = id});
         return Created($"/api/quizzes/{id}/questions/{questionId}", null);
     }
@@ -99,6 +103,7 @@ public class QuizController : Controller
     public IActionResult PutQuestion(int id, int qid, [FromBody]QuestionUpdateModel value)
     {
         const string sql = "UPDATE Question SET Text = @Text, CorrectAnswerId = @CorrectAnswerId WHERE Id = @QuestionId";
+        //TODO I prefer using DynamicParameters to prevent SQL injection. See GetQuizById for example
         int rowsUpdated = _connection.Execute(sql, new {QuestionId = qid, Text = value.Text, CorrectAnswerId = value.CorrectAnswerId});
         if (rowsUpdated == 0)
             return NotFound();
@@ -111,6 +116,7 @@ public class QuizController : Controller
     public IActionResult DeleteQuestion(int id, int qid)
     {
         const string sql = "DELETE FROM Question WHERE Id = @QuestionId";
+        //TODO I prefer using DynamicParameters to prevent SQL injection. See GetQuizById for example
         _connection.ExecuteScalar(sql, new {QuestionId = qid});
         return NoContent();
     }
@@ -121,6 +127,7 @@ public class QuizController : Controller
     public IActionResult PostAnswer(int id, int qid, [FromBody]AnswerCreateModel value)
     {
         const string sql = "INSERT INTO Answer (Text, QuestionId) VALUES(@Text, @QuestionId); SELECT LAST_INSERT_ROWID();";
+        //TODO I prefer using DynamicParameters to prevent SQL injection. See GetQuizById for example
         var answerId = _connection.ExecuteScalar(sql, new {Text = value.Text, QuestionId = qid});
         return Created($"/api/quizzes/{id}/questions/{qid}/answers/{answerId}", null);
     }
@@ -130,6 +137,7 @@ public class QuizController : Controller
     public IActionResult PutAnswer(int id, int qid, int aid, [FromBody]AnswerUpdateModel value)
     {
         const string sql = "UPDATE Answer SET Text = @Text WHERE Id = @AnswerId";
+        //TODO I prefer using DynamicParameters to prevent SQL injection. See GetQuizById for example
         int rowsUpdated = _connection.Execute(sql, new {AnswerId = qid, Text = value.Text});
         if (rowsUpdated == 0)
             return NotFound();
@@ -142,6 +150,7 @@ public class QuizController : Controller
     public IActionResult DeleteAnswer(int id, int qid, int aid)
     {
         const string sql = "DELETE FROM Answer WHERE Id = @AnswerId";
+        //TODO I prefer using DynamicParameters to prevent SQL injection. See GetQuizById for example
         _connection.ExecuteScalar(sql, new {AnswerId = aid});
         return NoContent();
     }
@@ -149,19 +158,28 @@ public class QuizController : Controller
     private Quiz GetQuizById(int id)
     {
         const string quizSql = "SELECT * FROM Quiz WHERE Id = @Id;";
-        return _connection.QuerySingleOrDefault<Quiz>(quizSql, new { Id = id });
+        var parameters = new DynamicParameters();
+        parameters.Add("@Id", id);
+
+        return _connection.QuerySingleOrDefault<Quiz>(quizSql, parameters);
     }
 
     private IEnumerable<Question> GetQuestionsByQuizId(int quizId)
     {
         const string questionsSql = "SELECT * FROM Question WHERE QuizId = @QuizId;";
-        return _connection.Query<Question>(questionsSql, new { QuizId = quizId });
+        var parameters = new DynamicParameters();
+        parameters.Add("@QuizId", quizId);
+
+        return _connection.Query<Question>(questionsSql, parameters);
     }
 
     private IDictionary<int, IList<Answer>> GetAnswersByQuizId(int quizId)
     {
         const string answersSql = "SELECT a.Id, a.Text, a.QuestionId FROM Answer a INNER JOIN Question q ON a.QuestionId = q.Id WHERE q.QuizId = @QuizId;";
-        return _connection.Query<Answer>(answersSql, new { QuizId = quizId })
+        var parameters = new DynamicParameters();
+        parameters.Add("@QuizId", quizId);
+
+        return _connection.Query<Answer>(answersSql, parameters)
             .Aggregate(new Dictionary<int, IList<Answer>>(), (dict, answer) => {
                 if (!dict.ContainsKey(answer.QuestionId))
                     dict.Add(answer.QuestionId, new List<Answer>());
@@ -169,5 +187,4 @@ public class QuizController : Controller
                 return dict;
             });
     }
-
 }

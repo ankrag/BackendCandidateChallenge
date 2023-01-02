@@ -23,6 +23,7 @@ public class QuizClient
 
     public async Task<Response<IEnumerable<Quiz>>> GetQuizzesAsync(CancellationToken cancellationToken)
     {
+        //TODO I would prefer to wrap this in a using statement to ensure proper dispose after request is complete. Applies to all methods with HttpRequestMessage
         var request = new HttpRequestMessage(HttpMethod.Get, new Uri(_quizServiceUri, "/api/quizzes"));
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         var response = await _httpClient.SendAsync(request, cancellationToken);
@@ -33,6 +34,7 @@ public class QuizClient
 
     public async Task<Response<Quiz>> GetQuizAsync(int id, CancellationToken cancellationToken)
     {
+        //TODO I would prefer to wrap this in a using statement to ensure proper dispose after request is complete. Applies to all methods with HttpRequestMessage
         var request = new HttpRequestMessage(HttpMethod.Get, new Uri(_quizServiceUri, "/api/quizzes/" + id));
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         var response = await _httpClient.SendAsync(request, cancellationToken);
